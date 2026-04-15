@@ -1,109 +1,132 @@
+import { motion } from 'framer-motion';
+import { Home, BookOpen, Users, Award, MoreHorizontal, ClipboardList, FileCheck, FileText, Info } from 'lucide-react';
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Users, BookOpen, FileText, ClipboardList, Award, Menu, X } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  currentPage: string;
+  onNavigate: (page: string) => void;
 }
 
-const tabs = [
-  { id: 'directory', label: 'Students', icon: Users },
-  { id: 'textbooks', label: 'Textbooks', icon: BookOpen },
-  { id: 'ministry', label: 'Ministry', icon: FileText },
-  { id: 'mid', label: 'Mid Exam', icon: ClipboardList },
-  { id: 'final', label: 'Final Exam', icon: ClipboardList },
-  { id: 'report', label: 'Report Card', icon: Award },
+const mainTabs = [
+  { key: 'home', label: 'Home', icon: Home },
+  { key: 'textbooks', label: 'Books', icon: BookOpen },
+  { key: 'students', label: 'Students', icon: Users },
+  { key: 'more', label: 'More', icon: MoreHorizontal },
 ];
 
-const Navbar = ({ activeTab, onTabChange }: NavbarProps) => {
-  const [mobileOpen, setMobileOpen] = useState(false);
+const moreItems = [
+  { key: 'mid', label: 'Mid Exam', icon: ClipboardList },
+  { key: 'final', label: 'Final Exam', icon: FileCheck },
+  { key: 'report', label: 'Report Card', icon: FileText },
+  { key: 'results', label: 'Ministry Results', icon: Award },
+];
+
+const Navbar = ({ currentPage, onNavigate }: NavbarProps) => {
+  const [showMore, setShowMore] = useState(false);
+  const isMoreActive = moreItems.some(item => item.key === currentPage);
+
+  const handleTabClick = (key: string) => {
+    if (key === 'more') {
+      setShowMore(!showMore);
+    } else {
+      setShowMore(false);
+      onNavigate(key);
+    }
+  };
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <motion.h1
-              className="text-xl font-bold bg-gradient-to-r from-primary to-[hsl(var(--secondary))] bg-clip-text text-transparent"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-            >
-              Grade 9 Portal
-            </motion.h1>
-
-            {/* Desktop nav */}
-            <div className="hidden md:flex gap-1">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => onTabChange(tab.id)}
-                    className={`relative px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                      isActive ? 'text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
-                    }`}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className="absolute inset-0 bg-primary rounded-lg"
-                        transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
-                      />
-                    )}
-                    <span className="relative z-10 flex items-center gap-1.5">
-                      <Icon size={16} />
-                      {tab.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Mobile hamburger */}
-            <button
-              className="md:hidden p-2 rounded-lg hover:bg-muted"
-              onClick={() => setMobileOpen(!mobileOpen)}
-            >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          </div>
+      {/* Top App Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 bg-card border-b border-border">
+        <div className="flex items-center gap-3">
+          <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-full" />
+          <span className="text-base font-semibold text-foreground">Grade 9 Portal</span>
         </div>
-      </nav>
+        <button
+          onClick={() => onNavigate('info')}
+          className={`p-2 rounded-full transition-colors ${
+            currentPage === 'info' ? 'bg-primary/15 text-primary' : 'text-muted-foreground active:bg-muted'
+          }`}
+        >
+          <Info className="w-5 h-5" />
+        </button>
+      </div>
 
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="md:hidden fixed inset-x-0 top-16 z-40 bg-card/95 backdrop-blur-xl border-b border-border p-4 space-y-1"
-          >
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    onTabChange(tab.id);
-                    setMobileOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+      {/* More Menu Overlay */}
+      {showMore && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm"
+          onClick={() => setShowMore(false)}
+        />
+      )}
+
+      {/* More Menu Sheet */}
+      {showMore && (
+        <motion.div
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="fixed bottom-16 left-0 right-0 z-50 bg-card border-t border-border rounded-t-2xl p-2 shadow-xl"
+        >
+          {moreItems.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => {
+                setShowMore(false);
+                onNavigate(item.key);
+              }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                currentPage === item.key
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-foreground active:bg-muted'
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              {item.label}
+            </button>
+          ))}
+        </motion.div>
+      )}
+
+      {/* Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
+        <div className="flex items-stretch justify-around h-16 max-w-lg mx-auto">
+          {mainTabs.map((tab) => {
+            const isActive = tab.key === 'more' ? isMoreActive || showMore : currentPage === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleTabClick(tab.key)}
+                className="flex flex-col items-center justify-center flex-1 relative py-1 transition-colors"
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="bottomNavIndicator"
+                    className="absolute top-1 w-8 h-[3px] rounded-full bg-primary"
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <tab.icon
+                  className={`w-5 h-5 mb-0.5 transition-colors ${
+                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  }`}
+                />
+                <span
+                  className={`text-[10px] font-medium transition-colors ${
+                    isActive ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
-                  <Icon size={18} />
                   {tab.label}
-                </button>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </>
   );
 };
