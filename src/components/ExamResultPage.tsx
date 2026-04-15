@@ -144,6 +144,24 @@ const ExamResultPage = ({ type }: ExamResultPageProps) => {
     setVerifying(false);
     if (data) {
       setVerifiedStudent(data);
+      // Auto-search for results immediately after verification
+      const studentResults = filteredResults.filter(r => r.student_id === String(data.id));
+      if (studentResults.length > 0) {
+        const found = studentResults[0];
+        const key = getResultKey(found);
+        if (found.student_password && !unlockedKeys.has(key)) {
+          setPendingResult(found);
+          setShowPasswordPrompt(true);
+          setPassword('');
+        } else {
+          setCurrentResult(found);
+          setShowResult(true);
+          setShowAnswer(false);
+          setNavLocked(false);
+        }
+      } else {
+        setError('No results found for this student. Results may not be uploaded yet.');
+      }
     } else {
       setError('Student not found. Check your number.');
     }
@@ -152,10 +170,10 @@ const ExamResultPage = ({ type }: ExamResultPageProps) => {
   const handleSearch = () => {
     setError('');
     if (!verifiedStudent) {
-      setError('Please verify your student number first');
+      // Auto-verify first
+      handleVerify();
       return;
     }
-    // Search by student_id matching the directory ID as string
     const studentResults = filteredResults.filter(r => r.student_id === String(verifiedStudent.id));
     if (studentResults.length > 0) {
       const found = studentResults[0];
