@@ -11,7 +11,7 @@ interface InfoPageProps {
 }
 
 const TELEGRAM_BOT_TOKEN = '8712778351:AAFQFFPYHLXU5vyij_UA-ng8bYwU0hP0l8s';
-const TELEGRAM_CHAT_ID = '8712778351'; // Bot's own chat - messages will go to bot owner
+const TELEGRAM_CHAT_ID = '6218343992';
 
 const InfoPage = ({ onBack }: InfoPageProps) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
