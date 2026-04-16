@@ -203,6 +203,26 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
                     <span className="text-xs text-foreground flex-1">Visit Profile</span>
                     <ExternalLink className="w-3 h-3 text-muted-foreground" />
                   </a>
+                  <a
+                    href="https://t.me/grade9studentstschannel"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 rounded-xl bg-muted active:bg-accent transition-colors"
+                  >
+                    <Send className="w-4 h-4 text-blue-500" />
+                    <span className="text-xs text-foreground flex-1">Telegram Channel</span>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                  </a>
+                  <a
+                    href="https://t.me/grade9studentsts"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 rounded-xl bg-muted active:bg-accent transition-colors"
+                  >
+                    <Send className="w-4 h-4 text-blue-500" />
+                    <span className="text-xs text-foreground flex-1">Telegram Group</span>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                  </a>
                 </div>
               </div>
             </motion.div>
