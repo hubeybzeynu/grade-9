@@ -337,7 +337,7 @@ const ExamResultPage = ({ type }: ExamResultPageProps) => {
                     type="number"
                     placeholder="Enter your student number (e.g., 5)"
                     value={studentId}
-                    onChange={(e) => { setStudentId(e.target.value); setVerifiedStudent(null); }}
+                    onChange={(e) => { setStudentId(e.target.value); setVerifiedStudent(null); setShowResult(false); setCurrentResult(null); setError(''); }}
                     onKeyDown={(e) => e.key === 'Enter' && (verifiedStudent ? handleSearch() : handleVerify())}
                     className={`input-glass pl-12 ${error ? 'border-destructive focus:ring-destructive/50' : ''}`}
                   />
@@ -378,12 +378,12 @@ const ExamResultPage = ({ type }: ExamResultPageProps) => {
                       whileTap={{ scale: 0.98 }}
                       onClick={handleVerify}
                       disabled={verifying}
-                      className="btn-gradient w-full flex items-center justify-center gap-2"
+                      className="btn-gradient w-full flex items-center justify-center gap-2 py-2.5 text-sm"
                     >
                       {verifying ? (
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
                       ) : (
-                        <UserCheck className="w-5 h-5" />
+                        <UserCheck className="w-4 h-4" />
                       )}
                       Verify Student
                     </motion.button>
@@ -392,9 +392,9 @@ const ExamResultPage = ({ type }: ExamResultPageProps) => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={handleSearch}
-                      className="btn-gradient w-full flex items-center justify-center gap-2"
+                      className="btn-gradient w-full flex items-center justify-center gap-2 py-2.5 text-sm"
                     >
-                      <Search className="w-5 h-5" />
+                      <Search className="w-4 h-4" />
                       View Result
                     </motion.button>
                   )}
