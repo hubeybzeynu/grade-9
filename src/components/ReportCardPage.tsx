@@ -123,9 +123,39 @@ const ReportCardPage = () => {
     if (idx >= 0) setCurrentIndex(idx);
   };
 
+  const handleVerify = async () => {
+    setError('');
+    setVerifiedStudent(null);
+    setReportCard(null);
+    if (!studentId.trim()) {
+      setError('Please enter your student number');
+      return;
+    }
+    const idNum = parseInt(studentId.trim());
+    if (isNaN(idNum)) {
+      setError('Please enter a valid number');
+      return;
+    }
+    setVerifying(true);
+    const { data } = await supabase
+      .from('students')
+      .select('id, name, english_name, image_url')
+      .eq('id', idNum)
+      .single();
+    setVerifying(false);
+    if (data) {
+      setVerifiedStudent(data);
+    } else {
+      setError('Student not found. Check your number.');
+    }
+  };
+
   const handleSearch = () => {
-    if (!studentId.trim()) return;
-    fetchCard(studentId.trim());
+    if (!verifiedStudent) {
+      handleVerify();
+      return;
+    }
+    fetchCard(String(verifiedStudent.id));
   };
 
   const navigateCard = (dir: number) => {
