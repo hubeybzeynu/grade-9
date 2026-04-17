@@ -242,24 +242,66 @@ const ReportCardPage = () => {
         {/* Search */}
         {!reportCard && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-md mx-auto mb-8">
-            <div className="glass-card p-6">
+            <div className="glass-card p-5">
               <label className="block text-sm font-medium mb-2">Enter Student Directory ID (1-98)</label>
-              <div className="flex gap-2">
+              <div className="relative mb-3">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
-                  type="text"
+                  type="number"
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
+                  onChange={(e) => {
+                    setStudentId(e.target.value);
+                    setVerifiedStudent(null);
+                    setError('');
+                  }}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   placeholder="e.g. 5"
-                  className="flex-1 px-4 py-3 rounded-xl bg-background/50 border border-border focus:border-primary focus:outline-none"
+                  className="w-full pl-10 pr-3 py-2.5 text-sm rounded-xl bg-background/50 border border-border focus:border-primary focus:outline-none"
                 />
-                <button onClick={handleSearch} className="btn-primary px-6 py-3 rounded-xl flex items-center gap-2">
-                  <Search className="w-4 h-4" />
-                  Search
-                </button>
               </div>
-              {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
-              {loading && <p className="text-muted-foreground text-sm mt-3">Loading...</p>}
+
+              {verifiedStudent && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
+                >
+                  <UserCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+                  {verifiedStudent.image_url && (
+                    <img src={verifiedStudent.image_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{verifiedStudent.english_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{verifiedStudent.name}</p>
+                  </div>
+                </motion.div>
+              )}
+
+              {error && <p className="text-destructive text-xs mb-2">{error}</p>}
+              {loading && <p className="text-muted-foreground text-xs mb-2">Loading report card...</p>}
+
+              {!verifiedStudent ? (
+                <button
+                  onClick={handleVerify}
+                  disabled={verifying}
+                  className="btn-gradient w-full flex items-center justify-center gap-2 py-2.5 text-sm rounded-xl"
+                >
+                  {verifying ? (
+                    <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                  ) : (
+                    <UserCheck className="w-4 h-4" />
+                  )}
+                  Verify Student
+                </button>
+              ) : (
+                <button
+                  onClick={handleSearch}
+                  className="btn-gradient w-full flex items-center justify-center gap-2 py-2.5 text-sm rounded-xl"
+                >
+                  <Search className="w-4 h-4" />
+                  View Report Card
+                </button>
+              )}
             </div>
           </motion.div>
         )}
