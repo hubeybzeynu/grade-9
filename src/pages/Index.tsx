@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
+// AnimatePresence kept for onboarding wrapper
 import SplashScreen from '@/components/SplashScreen';
 import PasswordGate from '@/components/PasswordGate';
 import WelcomeOnboarding from '@/components/WelcomeOnboarding';
