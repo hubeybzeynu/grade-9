@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Award, ImageIcon, X, HelpCircle, Download, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { resultImages, downloadLinks, nameToIdMap } from '@/data/ministryResults';
