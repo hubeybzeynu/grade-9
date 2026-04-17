@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
+// AnimatePresence kept for onboarding wrapper
 import SplashScreen from '@/components/SplashScreen';
 import PasswordGate from '@/components/PasswordGate';
 import WelcomeOnboarding from '@/components/WelcomeOnboarding';
@@ -98,11 +99,9 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <Navbar currentPage={currentPage} onNavigate={navigateTo} />
-      <AnimatePresence mode="wait">
-        <div key={currentPage}>
-          {renderPage()}
-        </div>
-      </AnimatePresence>
+      <div key={currentPage}>
+        {renderPage()}
+      </div>
     </div>
   );
 };

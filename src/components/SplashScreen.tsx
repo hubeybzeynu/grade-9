@@ -28,7 +28,8 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           <motion.img
             src="/logo.jpg"
             alt="St. Theresa School"
-            className="w-40 h-40 rounded-full shadow-2xl border-4 border-white/30"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            className="w-40 h-40 rounded-full shadow-2xl border-4 border-white/30 bg-white/10"
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
