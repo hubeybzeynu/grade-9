@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Award, ImageIcon, X, HelpCircle, Download, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { resultImages, downloadLinks, nameToIdMap } from '@/data/ministryResults';
@@ -14,6 +14,31 @@ const ResultsPage = () => {
   const [forgetFeedback, setForgetFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [forgetMatches, setForgetMatches] = useState<{ name: string; id: string; imageUrl?: string }[]>([]);
   const [error, setError] = useState('');
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const goPrev = () => {
+    const idx = studentIds.indexOf(studentId);
+    setStudentId(studentIds[idx > 0 ? idx - 1 : studentIds.length - 1]);
+  };
+  const goNext = () => {
+    const idx = studentIds.indexOf(studentId);
+    setStudentId(studentIds[idx < studentIds.length - 1 ? idx + 1 : 0]);
+  };
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) goNext(); else goPrev();
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   const studentIds = Object.keys(resultImages);
 
@@ -326,32 +351,36 @@ const ResultsPage = () => {
               </motion.button>
             </div>
 
-            {/* Image area - full width */}
-            <div className="flex-1 flex items-center justify-center overflow-auto p-2 relative">
+            {/* Image area - full width with swipe */}
+            <div
+              className="flex-1 flex items-center justify-center overflow-auto p-2 relative"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              style={{ touchAction: 'pan-y' }}
+            >
               {/* Navigation arrows - small, outside the image */}
               <button
-                onClick={() => {
-                  const currentIndex = studentIds.indexOf(studentId);
-                  setStudentId(studentIds[currentIndex > 0 ? currentIndex - 1 : studentIds.length - 1]);
-                }}
+                onClick={goPrev}
                 className="absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center active:bg-white/30"
               >
                 <ChevronLeft className="w-4 h-4 text-white" />
               </button>
               <button
-                onClick={() => {
-                  const currentIndex = studentIds.indexOf(studentId);
-                  setStudentId(studentIds[currentIndex < studentIds.length - 1 ? currentIndex + 1 : 0]);
-                }}
+                onClick={goNext}
                 className="absolute right-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center active:bg-white/30"
               >
                 <ChevronRight className="w-4 h-4 text-white" />
               </button>
 
-              <img
+              <motion.img
+                key={studentId}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2 }}
                 src={resultImages[studentId]}
                 alt="Ministry Result"
-                className="max-w-full max-h-full object-contain rounded-lg"
+                className="max-w-full max-h-full object-contain rounded-lg select-none"
+                draggable={false}
               />
             </div>
 
