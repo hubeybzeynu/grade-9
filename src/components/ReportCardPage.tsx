@@ -541,7 +541,7 @@ const ReportCardPage = () => {
                     <Printer className="w-4 h-4" /> Print
                   </button>
                   <button
-                    onClick={() => { setReportCard(null); setStudentId(''); setSearched(false); }}
+                    onClick={() => { setReportCard(null); setStudentId(''); setSearched(false); setVerifiedStudent(null); }}
                     className="btn-ghost px-4 py-2 rounded-xl"
                   >
                     Search Another
