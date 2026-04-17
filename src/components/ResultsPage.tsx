@@ -14,6 +14,31 @@ const ResultsPage = () => {
   const [forgetFeedback, setForgetFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [forgetMatches, setForgetMatches] = useState<{ name: string; id: string; imageUrl?: string }[]>([]);
   const [error, setError] = useState('');
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const goPrev = () => {
+    const idx = studentIds.indexOf(studentId);
+    setStudentId(studentIds[idx > 0 ? idx - 1 : studentIds.length - 1]);
+  };
+  const goNext = () => {
+    const idx = studentIds.indexOf(studentId);
+    setStudentId(studentIds[idx < studentIds.length - 1 ? idx + 1 : 0]);
+  };
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) goNext(); else goPrev();
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   const studentIds = Object.keys(resultImages);
 
