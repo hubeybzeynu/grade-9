@@ -1,78 +1,98 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Info, ChevronRight, User, 
-  BookOpen, Award, ClipboardList, FileCheck, FileText, 
-  Send, ArrowLeft, ExternalLink, HelpCircle
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Info, ChevronRight, User as UserIcon,
+  BookOpen, Award, ClipboardList, FileCheck, FileText,
+  Send, ArrowLeft, ExternalLink, HelpCircle, Star, LogOut,
 } from 'lucide-react';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import RatingForm from './RatingForm';
 
 interface InfoPageProps {
   onBack: () => void;
+  user: User | null;
 }
 
-const TELEGRAM_BOT_TOKEN = '8712778351:AAFQFFPYHLXU5vyij_UA-ng8bYwU0hP0l8s';
-const TELEGRAM_CHAT_ID = '6218343992';
-
-const InfoPage = ({ onBack }: InfoPageProps) => {
+const InfoPage = ({ onBack, user }: InfoPageProps) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [helpMessage, setHelpMessage] = useState('');
-  const [helpName, setHelpName] = useState('');
+  const [helpName, setHelpName] = useState(
+    (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || ''
+  );
   const [messageSent, setMessageSent] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState('');
+  const [signingOut, setSigningOut] = useState(false);
+
+  // Notify on first render that someone visited Info (only once per session)
+  useEffect(() => {
+    if (!user) return;
+    if (sessionStorage.getItem('info_visit_notified')) return;
+    sessionStorage.setItem('info_visit_notified', '1');
+    // Silent — no need to wait
+    supabase.functions
+      .invoke('notify-telegram', {
+        body: {
+          type: 'login',
+          user: {
+            id: user.id,
+            email: user.email,
+            name:
+              (user.user_metadata?.full_name as string) ||
+              (user.user_metadata?.name as string) ||
+              user.email,
+          },
+        },
+      })
+      .catch(() => {/* silent */});
+  }, [user]);
 
   const handleSendMessage = async () => {
     if (!helpMessage.trim()) return;
     setSending(true);
     setSendError('');
-    
+
     try {
-      const text = `📩 *Help Request*\n\n${helpName ? `👤 Name: ${helpName}\n` : ''}💬 Message:\n${helpMessage}`;
-      const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
-          text,
-          parse_mode: 'Markdown',
-        }),
+      const { error } = await supabase.functions.invoke('notify-telegram', {
+        body: {
+          type: 'rating',
+          rating: 0, // not a rating, but reuse channel
+          message: `📩 HELP REQUEST\n${helpMessage}`,
+          user: {
+            id: user?.id,
+            email: user?.email,
+            name: helpName || user?.email,
+          },
+        },
       });
-      
-      if (response.ok) {
-        setMessageSent(true);
-        setHelpMessage('');
-        setHelpName('');
-        setTimeout(() => setMessageSent(false), 3000);
-      } else {
-        setSendError('Failed to send. Please try again.');
-      }
-    } catch {
-      setSendError('Network error. Check your connection.');
+      if (error) throw error;
+      setMessageSent(true);
+      setHelpMessage('');
+      setTimeout(() => setMessageSent(false), 3000);
+    } catch (e) {
+      setSendError(e instanceof Error ? e.message : 'Failed to send. Try again.');
     }
     setSending(false);
   };
 
-  // Notify bot about a visitor
-  const notifyVisit = async () => {
-    try {
-      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
-          text: `🌐 Someone visited the Grade 9 Portal info page`,
-        }),
-      });
-    } catch { /* silent */ }
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await supabase.auth.signOut();
+    // Reset session flags so next login re-notifies
+    sessionStorage.removeItem('info_visit_notified');
+    Object.keys(sessionStorage)
+      .filter((k) => k.startsWith('notified_'))
+      .forEach((k) => sessionStorage.removeItem(k));
+    window.location.reload();
   };
-
-  // Notify on first render
-  useState(() => { notifyVisit(); });
 
   const menuItems = [
     { key: 'about', label: 'About the App', icon: Info, color: 'bg-blue-500' },
     { key: 'help', label: 'Help', icon: HelpCircle, color: 'bg-emerald-500' },
-    { key: 'contact', label: 'Contact', icon: User, color: 'bg-amber-500' },
+    { key: 'rate', label: 'Rate & Feedback', icon: Star, color: 'bg-amber-500' },
+    { key: 'contact', label: 'Contact', icon: UserIcon, color: 'bg-rose-500' },
+    { key: 'account', label: 'Account', icon: LogOut, color: 'bg-slate-500' },
   ];
 
   if (activeSection) {
@@ -100,17 +120,16 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
                 <div className="bg-card rounded-2xl p-4 border border-border">
                   <h3 className="text-sm font-semibold text-foreground mb-2">📱 What is this app?</h3>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Grade 9 Portal is a comprehensive student hub designed for Grade 9 students at St. Theresa School. 
+                    Grade 9 Portal is a comprehensive student hub designed for Grade 9 students at St. Theresa School.
                     It provides easy access to all academic resources in one place, optimized for mobile use.
                   </p>
                 </div>
-
                 <div className="bg-card rounded-2xl p-4 border border-border">
                   <h3 className="text-sm font-semibold text-foreground mb-2">📚 Features</h3>
                   <div className="space-y-2">
                     {[
                       { icon: BookOpen, text: 'Digital Textbooks – All 12 subject textbooks with built-in PDF viewer and content finder' },
-                      { icon: User, text: 'Student Directory – Browse all 98 students with search and filter' },
+                      { icon: UserIcon, text: 'Student Directory – Browse all 98 students with search and filter' },
                       { icon: ClipboardList, text: 'Mid Exam Results – View mid-term examination results' },
                       { icon: FileCheck, text: 'Final Exam Results – Access final examination results' },
                       { icon: FileText, text: 'Report Card – View your academic report card' },
@@ -123,13 +142,11 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
                     ))}
                   </div>
                 </div>
-
                 <div className="bg-card rounded-2xl p-4 border border-border">
                   <h3 className="text-sm font-semibold text-foreground mb-2">👨‍💻 Developer</h3>
                   <p className="text-xs text-muted-foreground">Created by Hubeyb Zeynu</p>
                   <p className="text-xs text-muted-foreground mt-1">Built with ❤️ for students</p>
                 </div>
-
                 <div className="bg-card rounded-2xl p-4 border border-border">
                   <h3 className="text-sm font-semibold text-foreground mb-2">📌 Version</h3>
                   <p className="text-xs text-muted-foreground">Version 2.0.0</p>
@@ -140,10 +157,10 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
 
           {activeSection === 'help' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <h2 className="text-lg font-bold text-foreground mb-3">Help</h2>
-              <div className="bg-card rounded-2xl p-4 border border-border mb-3">
+              <h2 className="text-lg font-bold text-foreground mb-3">Help & Support</h2>
+              <div className="bg-card rounded-2xl p-4 border border-border">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Need help? Type your message below and send it. The developer will receive it directly.
+                  Need help? Send a message — the developer will get it on Telegram instantly.
                 </p>
                 <div className="space-y-2">
                   <input
@@ -155,7 +172,7 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
                   <textarea
                     value={helpMessage}
                     onChange={(e) => setHelpMessage(e.target.value)}
-                    placeholder="Type your message here..."
+                    placeholder="What do you need help with?"
                     className="w-full p-3 rounded-xl bg-muted border border-border text-sm resize-none h-28 focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   <button
@@ -164,18 +181,23 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:opacity-80 transition-opacity"
                   >
                     <Send className="w-4 h-4" />
-                    {sending ? 'Sending...' : 'Send Message'}
+                    {sending ? 'Sending…' : 'Send Message'}
                   </button>
                   {messageSent && (
                     <motion.p initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-xs text-emerald-500 text-center">
                       ✓ Message sent! We'll respond soon.
                     </motion.p>
                   )}
-                  {sendError && (
-                    <p className="text-xs text-destructive text-center">{sendError}</p>
-                  )}
+                  {sendError && <p className="text-xs text-destructive text-center">{sendError}</p>}
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {activeSection === 'rate' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <h2 className="text-lg font-bold text-foreground mb-3">Rate this App</h2>
+              <RatingForm user={user} />
             </motion.div>
           )}
 
@@ -185,7 +207,7 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
               <div className="bg-card rounded-2xl p-4 border border-border">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-12 h-12 rounded-full bg-primary/15 flex items-center justify-center">
-                    <User className="w-6 h-6 text-primary" />
+                    <UserIcon className="w-6 h-6 text-primary" />
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-foreground">Hubeyb Zeynu</h3>
@@ -193,16 +215,6 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <a
-                    href="https://hubproman"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-3 rounded-xl bg-muted active:bg-accent transition-colors"
-                  >
-                    <User className="w-4 h-4 text-primary" />
-                    <span className="text-xs text-foreground flex-1">Visit Profile</span>
-                    <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                  </a>
                   <a
                     href="https://t.me/grade9studentstschannel"
                     target="_blank"
@@ -223,7 +235,50 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
                     <span className="text-xs text-foreground flex-1">Telegram Group</span>
                     <ExternalLink className="w-3 h-3 text-muted-foreground" />
                   </a>
+                  <a
+                    href="mailto:hubeybzeynu@gmail.com"
+                    className="flex items-center gap-2 p-3 rounded-xl bg-muted active:bg-accent transition-colors"
+                  >
+                    <Send className="w-4 h-4 text-rose-500" />
+                    <span className="text-xs text-foreground flex-1">Email Developer</span>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground" />
+                  </a>
                 </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeSection === 'account' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <h2 className="text-lg font-bold text-foreground mb-3">Account</h2>
+              <div className="bg-card rounded-2xl p-4 border border-border">
+                <div className="flex items-center gap-3 mb-4">
+                  {user?.user_metadata?.avatar_url ? (
+                    <img
+                      src={user.user_metadata.avatar_url as string}
+                      alt="avatar"
+                      className="w-14 h-14 rounded-full object-cover border border-border"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
+                      <UserIcon className="w-7 h-7 text-primary" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-foreground truncate">
+                      {(user?.user_metadata?.full_name as string) || user?.email || 'User'}
+                    </h3>
+                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-destructive/10 text-destructive text-sm font-medium active:bg-destructive/20 disabled:opacity-50"
+                >
+                  <LogOut className="w-4 h-4" />
+                  {signingOut ? 'Signing out…' : 'Sign Out'}
+                </button>
               </div>
             </motion.div>
           )}
@@ -241,7 +296,7 @@ const InfoPage = ({ onBack }: InfoPageProps) => {
       <div className="max-w-lg mx-auto">
         <div className="py-4 mb-2">
           <h1 className="text-xl font-bold text-foreground">Info</h1>
-          <p className="text-muted-foreground text-xs mt-0.5">About, help & contact</p>
+          <p className="text-muted-foreground text-xs mt-0.5">About, help, rate & contact</p>
         </div>
 
         <div className="space-y-1.5">

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize2, Download } from 'lucide-react';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -34,9 +34,13 @@ const PdfViewer = ({ url, initialPage = 1, subject }: PdfViewerProps) => {
   const [containerWidth, setContainerWidth] = useState(400);
   const [pageInputValue, setPageInputValue] = useState('');
   const [isEditingPage, setIsEditingPage] = useState(false);
-  const [slideDirection, setSlideDirection] = useState(0);
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
+
+  // Finger-drag state
+  const dragX = useMotionValue(0);
+  const isDragging = useRef(false);
+  const containerWidthRef = useRef(400);
+  // Slight opacity dim while dragging far
+  const opacity = useTransform(dragX, [-300, 0, 300], [0.6, 1, 0.6]);
 
   const frontMatter = subject ? (textbookPageInfo[subject]?.frontMatter || 0) : 0;
 
@@ -53,17 +57,21 @@ const PdfViewer = ({ url, initialPage = 1, subject }: PdfViewerProps) => {
   const containerRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
       const observer = new ResizeObserver((entries) => {
-        setContainerWidth(entries[0].contentRect.width);
+        const w = entries[0].contentRect.width;
+        setContainerWidth(w);
+        containerWidthRef.current = w;
       });
       observer.observe(node);
       setContainerWidth(node.clientWidth);
+      containerWidthRef.current = node.clientWidth;
     }
   }, []);
 
-  const goToPage = (page: number, direction?: number) => {
+  const goToPage = (page: number) => {
     if (page >= 1 && page <= numPages) {
-      setSlideDirection(direction ?? (page > pageNumber ? 1 : -1));
       setPageNumber(page);
+      // reset drag position for new page
+      dragX.set(0);
     }
   };
 
@@ -92,7 +100,6 @@ const PdfViewer = ({ url, initialPage = 1, subject }: PdfViewerProps) => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
     } catch {
-      // If download fails, try opening in new tab
       try {
         window.open(url, '_blank');
       } catch {
@@ -101,28 +108,49 @@ const PdfViewer = ({ url, initialPage = 1, subject }: PdfViewerProps) => {
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (scale > 1) return;
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
+  // Animate dragX back to a target with spring, then commit page change
+  const settleTo = (target: number, nextPage?: number) => {
+    animate(dragX, target, {
+      type: 'spring',
+      stiffness: 350,
+      damping: 35,
+      onComplete: () => {
+        if (nextPage !== undefined) {
+          setPageNumber(nextPage);
+          dragX.set(0);
+        }
+      },
+    });
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || touchStartY.current === null || scale > 1) return;
-    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
-    if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
-      if (deltaX < 0) goToPage(pageNumber + 1, 1);
-      else goToPage(pageNumber - 1, -1);
+  const handleDragEnd = (
+    _: MouseEvent | TouchEvent | PointerEvent,
+    info: { offset: { x: number; y: number }; velocity: { x: number; y: number } }
+  ) => {
+    isDragging.current = false;
+    if (scale > 1) {
+      // zoomed: don't change pages
+      animate(dragX, 0, { type: 'spring', stiffness: 400, damping: 40 });
+      return;
     }
-    touchStartX.current = null;
-    touchStartY.current = null;
-  };
+    const w = containerWidthRef.current || 400;
+    const dx = info.offset.x;
+    const vx = info.velocity.x;
 
-  const slideVariants = {
-    enter: (direction: number) => ({ x: direction > 0 ? 300 : -300, opacity: 0 }),
-    center: { x: 0, opacity: 1 },
-    exit: (direction: number) => ({ x: direction > 0 ? -300 : 300, opacity: 0 }),
+    // Threshold: 25% of width OR fast flick (>500 px/s)
+    const threshold = w * 0.25;
+    const flick = Math.abs(vx) > 500;
+
+    if ((dx < -threshold || (flick && vx < 0)) && pageNumber < numPages) {
+      // Next page — slide content fully out left, then commit
+      settleTo(-w, pageNumber + 1);
+    } else if ((dx > threshold || (flick && vx > 0)) && pageNumber > 1) {
+      // Prev page — slide fully right
+      settleTo(w, pageNumber - 1);
+    } else {
+      // Snap back
+      animate(dragX, 0, { type: 'spring', stiffness: 400, damping: 40 });
+    }
   };
 
   return (
@@ -131,7 +159,7 @@ const PdfViewer = ({ url, initialPage = 1, subject }: PdfViewerProps) => {
       <div className="flex items-center justify-between px-3 py-2 bg-card border-b border-border shrink-0">
         <div className="flex items-center gap-1">
           <button
-            onClick={() => goToPage(pageNumber - 1, -1)}
+            onClick={() => goToPage(pageNumber - 1)}
             disabled={pageNumber <= 1}
             className="p-2 rounded-lg bg-muted disabled:opacity-30 active:bg-accent transition-colors"
           >
@@ -160,7 +188,7 @@ const PdfViewer = ({ url, initialPage = 1, subject }: PdfViewerProps) => {
             <span className="text-xs text-muted-foreground">/ {numPages - frontMatter}</span>
           </div>
           <button
-            onClick={() => goToPage(pageNumber + 1, 1)}
+            onClick={() => goToPage(pageNumber + 1)}
             disabled={pageNumber >= numPages}
             className="p-2 rounded-lg bg-muted disabled:opacity-30 active:bg-accent transition-colors"
           >
@@ -198,13 +226,11 @@ const PdfViewer = ({ url, initialPage = 1, subject }: PdfViewerProps) => {
         </div>
       </div>
 
-      {/* PDF content with swipe + animation */}
+      {/* PDF content with finger-drag swipe */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto flex justify-center"
-        style={{ touchAction: scale > 1 ? 'pan-x pan-y' : 'pan-y' }}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        className="flex-1 overflow-hidden relative"
+        style={{ touchAction: scale > 1 ? 'pan-x pan-y pinch-zoom' : 'pan-y' }}
       >
         <Document
           file={url}
@@ -225,24 +251,23 @@ const PdfViewer = ({ url, initialPage = 1, subject }: PdfViewerProps) => {
             </div>
           }
         >
-          <AnimatePresence mode="wait" custom={slideDirection}>
-            <motion.div
-              key={pageNumber}
-              custom={slideDirection}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.2, ease: 'easeInOut' }}
-            >
-              <Page
-                pageNumber={pageNumber}
-                width={containerWidth * scale}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-              />
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            drag={scale > 1 ? false : 'x'}
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.6}
+            dragMomentum={false}
+            onDragStart={() => { isDragging.current = true; }}
+            onDragEnd={handleDragEnd}
+            style={{ x: dragX, opacity }}
+            className="h-full overflow-auto flex justify-center will-change-transform"
+          >
+            <Page
+              pageNumber={pageNumber}
+              width={containerWidth * scale}
+              renderTextLayer={true}
+              renderAnnotationLayer={true}
+            />
+          </motion.div>
         </Document>
       </div>
     </div>
