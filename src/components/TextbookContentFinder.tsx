@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, BookOpen, Dumbbell, Activity, FileQuestion } from 'lucide-react';
-import { textbookContentIndex, ContentItem } from '@/data/textbookContent';
+import { textbookContentIndex, textbookPageInfo, ContentItem } from '@/data/textbookContent';
 
 interface TextbookContentFinderProps {
   subject: string;
@@ -19,7 +19,9 @@ const TextbookContentFinder = ({ subject, onGoToPage }: TextbookContentFinderPro
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'exercise' | 'activity' | 'review'>('all');
 
-  const items = textbookContentIndex[subject] || [];
+  const frontMatter = textbookPageInfo[subject]?.frontMatter || 0;
+  // Only show items in the Arabic-numbered (book) pages — skip front matter (roman numerals i, ii, iii…)
+  const items = (textbookContentIndex[subject] || []).filter((it) => it.page > frontMatter);
 
   const filtered = useMemo(() => {
     return items.filter((item) => {
@@ -142,9 +144,9 @@ const TextbookContentFinder = ({ subject, onGoToPage }: TextbookContentFinderPro
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{item.title}</p>
-                            <p className="text-xs text-muted-foreground">PDF Page {item.page}</p>
+                            <p className="text-xs text-muted-foreground">Book page {item.page - frontMatter}</p>
                           </div>
-                          <span className="text-xs text-primary font-mono shrink-0">p.{item.page}</span>
+                          <span className="text-xs text-primary font-mono shrink-0">p.{item.page - frontMatter}</span>
                         </motion.button>
                       );
                     })}

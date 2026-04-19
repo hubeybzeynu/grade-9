@@ -3,11 +3,12 @@ import { motion } from 'framer-motion';
 import {
   Info, ChevronRight, User as UserIcon,
   BookOpen, Award, ClipboardList, FileCheck, FileText,
-  Send, ArrowLeft, ExternalLink, HelpCircle, Star, LogOut,
+  Send, ArrowLeft, ExternalLink, MessageSquare, Star, LogOut,
 } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import RatingForm from './RatingForm';
+import FeedbackList from './FeedbackList';
 
 interface InfoPageProps {
   onBack: () => void;
@@ -16,13 +17,6 @@ interface InfoPageProps {
 
 const InfoPage = ({ onBack, user }: InfoPageProps) => {
   const [activeSection, setActiveSection] = useState<string | null>(null);
-  const [helpMessage, setHelpMessage] = useState('');
-  const [helpName, setHelpName] = useState(
-    (user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || ''
-  );
-  const [messageSent, setMessageSent] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState('');
   const [signingOut, setSigningOut] = useState(false);
 
   // Notify on first render that someone visited Info (only once per session)
@@ -48,33 +42,7 @@ const InfoPage = ({ onBack, user }: InfoPageProps) => {
       .catch(() => {/* silent */});
   }, [user]);
 
-  const handleSendMessage = async () => {
-    if (!helpMessage.trim()) return;
-    setSending(true);
-    setSendError('');
-
-    try {
-      const { error } = await supabase.functions.invoke('notify-telegram', {
-        body: {
-          type: 'rating',
-          rating: 0, // not a rating, but reuse channel
-          message: `📩 HELP REQUEST\n${helpMessage}`,
-          user: {
-            id: user?.id,
-            email: user?.email,
-            name: helpName || user?.email,
-          },
-        },
-      });
-      if (error) throw error;
-      setMessageSent(true);
-      setHelpMessage('');
-      setTimeout(() => setMessageSent(false), 3000);
-    } catch (e) {
-      setSendError(e instanceof Error ? e.message : 'Failed to send. Try again.');
-    }
-    setSending(false);
-  };
+  // (Help section removed — replaced by Feedback wall)
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -89,8 +57,8 @@ const InfoPage = ({ onBack, user }: InfoPageProps) => {
 
   const menuItems = [
     { key: 'about', label: 'About the App', icon: Info, color: 'bg-blue-500' },
-    { key: 'help', label: 'Help', icon: HelpCircle, color: 'bg-emerald-500' },
-    { key: 'rate', label: 'Rate & Feedback', icon: Star, color: 'bg-amber-500' },
+    { key: 'feedback', label: 'Feedback & Users', icon: MessageSquare, color: 'bg-emerald-500' },
+    { key: 'rate', label: 'Rate this App', icon: Star, color: 'bg-amber-500' },
     { key: 'contact', label: 'Contact', icon: UserIcon, color: 'bg-rose-500' },
     { key: 'account', label: 'Account', icon: LogOut, color: 'bg-slate-500' },
   ];
@@ -155,42 +123,13 @@ const InfoPage = ({ onBack, user }: InfoPageProps) => {
             </motion.div>
           )}
 
-          {activeSection === 'help' && (
+          {activeSection === 'feedback' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <h2 className="text-lg font-bold text-foreground mb-3">Help & Support</h2>
-              <div className="bg-card rounded-2xl p-4 border border-border">
-                <p className="text-xs text-muted-foreground mb-3">
-                  Need help? Send a message — the developer will get it on Telegram instantly.
-                </p>
-                <div className="space-y-2">
-                  <input
-                    value={helpName}
-                    onChange={(e) => setHelpName(e.target.value)}
-                    placeholder="Your name (optional)"
-                    className="w-full p-3 rounded-xl bg-muted border border-border text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <textarea
-                    value={helpMessage}
-                    onChange={(e) => setHelpMessage(e.target.value)}
-                    placeholder="What do you need help with?"
-                    className="w-full p-3 rounded-xl bg-muted border border-border text-sm resize-none h-28 focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={!helpMessage.trim() || sending}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-40 active:opacity-80 transition-opacity"
-                  >
-                    <Send className="w-4 h-4" />
-                    {sending ? 'Sending…' : 'Send Message'}
-                  </button>
-                  {messageSent && (
-                    <motion.p initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="text-xs text-emerald-500 text-center">
-                      ✓ Message sent! We'll respond soon.
-                    </motion.p>
-                  )}
-                  {sendError && <p className="text-xs text-destructive text-center">{sendError}</p>}
-                </div>
-              </div>
+              <h2 className="text-lg font-bold text-foreground mb-1">Feedback & Users</h2>
+              <p className="text-xs text-muted-foreground mb-3">
+                Live ratings and reviews from people using the app.
+              </p>
+              <FeedbackList />
             </motion.div>
           )}
 
