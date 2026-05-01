@@ -13,6 +13,8 @@ import ResultsPage from '@/components/ResultsPage';
 import ExamResultPage from '@/components/ExamResultPage';
 import ReportCardPage from '@/components/ReportCardPage';
 import InfoPage from '@/components/InfoPage';
+import ToolsModal from '@/components/ToolsModal';
+import { Wrench } from 'lucide-react';
 
 const Index = () => {
   const [splashDone, setSplashDone] = useState(() => sessionStorage.getItem('splash_shown') === 'true');
@@ -21,6 +23,7 @@ const Index = () => {
   const [onboarded, setOnboarded] = useState(() => localStorage.getItem('portal_onboarded') === 'true');
   const [currentPage, setCurrentPage] = useState('home');
   const [pageHistory, setPageHistory] = useState<string[]>(['home']);
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   // Auth: subscribe BEFORE getSession to avoid missing the initial event
   useEffect(() => {
@@ -154,6 +157,17 @@ const Index = () => {
       <div key={currentPage}>
         {renderPage()}
       </div>
+
+      {/* Floating Tools button */}
+      <button
+        onClick={() => setToolsOpen(true)}
+        aria-label="Open tools"
+        className="fixed right-4 bottom-20 z-40 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 transition"
+      >
+        <Wrench className="w-5 h-5" />
+      </button>
+
+      {toolsOpen && <ToolsModal onClose={() => setToolsOpen(false)} />}
     </div>
   );
 };
